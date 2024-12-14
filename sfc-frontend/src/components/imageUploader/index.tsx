@@ -2,6 +2,7 @@ import React from 'react'
 import Button from '../UI/Button'
 import { EUploadStatus, FileIntermediate } from '../../types/FileIntermediate'
 import { uniqueId } from 'lodash'
+import Divider from '../UI/Divider'
 
 const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg']
 const BATCH_SIZE = 5
@@ -141,14 +142,39 @@ const ImageUploader = () => {
         </div>
       </div>
 
-      {images.map((image) => {
-        return <div key={image.id}>{image.file.name}</div>
-      })}
-
       <div className=" w-[600px] flex justify-evenly">
         <Button label="Upload" onClick={onUpload} />
         <Button label="Clear" onClick={onClear} />
       </div>
+
+      {images.length ? (
+        <div className="flex flex-col gap-2 w-[600px] h-full border-black border-2 p-2 rounded-md overflow-auto">
+          <div
+            className="grid w-full justify-items-center items-center p-2 border-black border-b-2 sticky top-0"
+            style={{ gridTemplateColumns: '1fr min-content 1fr' }}
+          >
+            <h2 className="text-xl">Files</h2>
+            <Divider vertical />
+            <h3 className="text-xl">Results</h3>
+          </div>
+
+          {images.map((img, idx) => (
+            <div key={idx}>
+              <div
+                className="grid w-full justify-items-center items-center "
+                style={{ gridTemplateColumns: '1fr min-content 1fr' }}
+              >
+                <span>{img.file.name}</span>
+                <Divider vertical />
+                <span></span>
+              </div>
+              <Divider />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <h2>Upload some images for prediction</h2>
+      )}
     </div>
   )
 }
