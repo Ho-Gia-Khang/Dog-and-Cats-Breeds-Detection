@@ -3,7 +3,7 @@ import Button from '../UI/Button'
 import { EUploadStatus, FileIntermediate } from '../../types/FileIntermediate'
 import { uniqueId } from 'lodash'
 
-const ALLOWED_FILE_TYPES = ['image/png', 'image/jpg']
+const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg']
 const BATCH_SIZE = 5
 
 const ImageUploader = () => {
@@ -11,6 +11,22 @@ const ImageUploader = () => {
   const [images, setImages] = React.useState<FileIntermediate[]>([])
 
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  function receiveFiles(fileList: FileList | null) {
+    if (!fileList) return
+
+    const files = Array.from(fileList)
+    if (!files.length) return
+
+    const acceptedFiles = files
+      .filter((file) => ALLOWED_FILE_TYPES.includes(file.type))
+      .map((file) => ({
+        id: uniqueId(),
+        file: file,
+        status: EUploadStatus.Idle,
+      }))
+    setImages([...images, ...acceptedFiles])
+  }
 
   function onDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
@@ -28,17 +44,7 @@ const ImageUploader = () => {
     e.preventDefault()
     setIsDragging(false)
 
-    const files = Array.from(e.dataTransfer.files)
-    if (!files.length) return
-
-    const acceptedFiles = files
-      .filter((file) => ALLOWED_FILE_TYPES.includes(file.type))
-      .map((file) => ({
-        id: uniqueId(),
-        file: file,
-        status: EUploadStatus.Idle,
-      }))
-    setImages([...images, ...acceptedFiles])
+    receiveFiles(e.dataTransfer.files)
   }
   function onClick() {
     if (!inputRef.current) return
@@ -49,14 +55,24 @@ const ImageUploader = () => {
     setImages([])
   }
 
+  async function onUpload() {
+    for (const image of images) {
+      image.status = EUploadStatus.Pending
+    }
+    await startUpload()
+  }
+
   async function startUpload() {
-    const queue: Promise<void>[] = images.slice(0, BATCH_SIZE).map((image) => {
-      const promise = uploadImage(image.file).finally(() => {
-        const index = queue.indexOf(promise)
-        if (index !== -1) queue.splice(index, 1)
+    const queue: Promise<void>[] = images
+      .filter((img) => img.status === EUploadStatus.Pending)
+      .slice(0, BATCH_SIZE)
+      .map((image) => {
+        const promise = uploadImage(image).finally(() => {
+          const index = queue.indexOf(promise)
+          if (index !== -1) queue.splice(index, 1)
+        })
+        return promise
       })
-      return promise
-    })
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -71,18 +87,22 @@ const ImageUploader = () => {
         (image) => image.status === EUploadStatus.Pending
       )
       if (nextImage) {
-        const nextPromise = uploadImage(nextImage.file).finally(() => {
+        const nextPromise = uploadImage(nextImage).finally(() => {
           const index = queue.indexOf(nextPromise)
           if (index !== -1) queue.splice(index, 1)
         })
+        queue.push(nextPromise)
       }
     }
     await Promise.allSettled(queue)
   }
 
-  async function uploadImage(image: File): Promise<void> {
+  async function uploadImage(image: FileIntermediate): Promise<void> {
     return new Promise((resolve) => {
-      setTimeout(() => console.log('uploaded', image.name), 1000)
+      image.status = EUploadStatus.Uploading
+      setTimeout(() => {
+        console.log('uploaded', image.file.name)
+      }, Math.random() * 1000)
       resolve()
     })
   }
@@ -113,14 +133,20 @@ const ImageUploader = () => {
                 className="hidden"
                 type="file"
                 accept=".png, .jpg"
+                multiple
+                onChange={(e) => receiveFiles(e.target.files)}
               />
             </div>
           )}
         </div>
       </div>
 
+      {images.map((image) => {
+        return <div key={image.id}>{image.file.name}</div>
+      })}
+
       <div className=" w-[600px] flex justify-evenly">
-        <Button label="Upload" onClick={startUpload} />
+        <Button label="Upload" onClick={onUpload} />
         <Button label="Clear" onClick={onClear} />
       </div>
     </div>
