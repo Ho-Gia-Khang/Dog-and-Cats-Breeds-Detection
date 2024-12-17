@@ -1,7 +1,7 @@
-import cv2
 from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from keras.preprocessing import image
 import numpy as np
 from PIL import Image
 
@@ -28,38 +28,101 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def load_cnn_model():
-    model = tf.keras.models.load_model(r'../models/CNN.h5', compile=False)
+class_names = [
+    "Abyssinian", "Bengal", "Birman", "Bombay", "British Shorthair", 
+    "Egyptian Mau", "Maine Coon", "Persian", "Ragdoll", "Russian Blue", 
+    "Siamese", "Sphynx", "American Bulldog", "American Pit Bull Terrier", 
+    "Basset Hound", "Beagle", "Boxer", "Chihuahua", "English Cocker Spaniel", 
+    "English Setter", "German Shorthaired", "Great Pyrenees", "Havanese", 
+    "Japanese Chin", "Keeshond", "Leonberger", "Miniature Pinscher", 
+    "Newfoundland", "Pomeranian", "Pug", "Saint Bernard", "Samoyed", 
+    "Scottish Terrier", "Shiba Inu", "Staffordshire Bull Terrier", 
+    "Wheaten Terrier", "Yorkshire Terrier"
+]
+
+def load_resnet_model():
+    model = tf.keras.models.load_model(r'../models/ResNet50_V2.keras', compile=False)
     optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
-    model.compile(optimizer=optimizer, loss='binary_crossentropy', metrics=['accuracy'])
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['CategoricalAccuracy'])
     return model
 
-cnn_model = load_cnn_model()
+def load_mobilenet_model():
+    model = tf.keras.models.load_model(r'../models/MobileNet_V2.keras', compile=False)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['CategoricalAccuracy'])
+    return model
 
-@app.post("api/upload/cnn")
-async def predict_cnn(file: UploadFile = File(...)):
-    file_size = len(file.file.read())
+def load_inception_model():
+    model = tf.keras.models.load_model(r'../models/Inception_V3.keras', compile=False)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+    model.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['CategoricalAccuracy'])
+    return model
+
+def preprocess_image(image_path, size):
+    img = image.load_img(image_path, target_size=size)
+    image_array = image.img_to_array(img)
+    image_array = tf.expand_dims(image_array, 0)
+    return image_array
+
+def predict_image(model, image_array):
+    predictions = model.predict(image_array)
+    predicted_class_index = np.argmax(predictions[0]) # get the index of the highest probability
+    predicted_class = class_names[predicted_class_index]
+    confidence = np.max(predictions[0]) # get the highest probability
+    return {"predicted_class": predicted_class, "confidence": confidence}
+
+resnet_model = load_resnet_model()
+mobilenet_model = load_mobilenet_model()
+inception_model = load_inception_model()
+
+@app.post("api/upload/resnet")
+async def predict_resnet(file: UploadFile = File(...)):
+    # Check file size
+    file_size_mb = len(await file.read()) / (1024 * 1024)
+    file.file.seek(0)  # Reset file pointer to beginning
+
+    print(f"Received file: {file.filename}, Content-Type: {file.content_type}, Size: {file_size_mb:.2f} MB")
+
+    pil_image = Image.open(file.file)
+    pil_image = pil_image.convert("RGB")  # Ensure the image is in RGB mode
+
+    image_array = preprocess_image(pil_image, (224, 224))  # ResNet50 expects 224x224 images
+
+    prediction = predict_image(resnet_model, image_array)
+
+    return JSONResponse(content={"prediction": prediction})
+
+@app.post("api/upload/mobilenet")
+async def predict_mobilenet(file: UploadFile = File(...)):
+    file_size_mb = len(await file.read()) / (1024 * 1024)
     file.file.seek(0)
 
-    pil_img = Image.open(file.file)
+    print(f"Received file: {file.filename}, Content-Type: {file.content_type}, Size: {file_size_mb:.2f} MB")
 
-    pred_img = np.array(pil_img)
-    pred_img = cv2.imread(pred_img, cv2.COLOR_BGR2RGB)
-    pred_img = cv2.resize(pred_img, (128, 128))
-    pred_img = np.reshape(pred_img, (1, 128, 128, 1)) / 255.0
+    pil_image = Image.open(file.file)
+    pil_image = pil_image.convert("RGB")
 
-    result = cnn_model.predict(pred_img)
+    image_array = preprocess_image(pil_image, (224, 224)) # MobileNetV2 expects 224x224 images
 
-    message = ""
-    if result < 0.5:
-        message = "Real"
-    else:
-        message = "Forge"
+    prediction = predict_image(mobilenet_model, image_array)
 
-    result = result * 100
-    result = np.round(result, 2)
-    
-    return JSONResponse(content={"result": result, "message": message}, status_code=200)
+    return JSONResponse(content={"prediction": prediction})
+
+@app.post("api/upload/inception")
+async def predict_inception(file: UploadFile = File(...)):
+    file_size_mb = len(await file.read()) / (1024 * 1024)
+    file.file.seek(0)
+
+    print(f"Received file: {file.filename}, Content-Type: {file.content_type}, Size: {file_size_mb:.2f} MB")
+
+    pil_image = Image.open(file.file)
+    pil_image = pil_image.convert("RGB")
+
+    image_array = preprocess_image(pil_image, (299, 299))
+
+    prediction = predict_image(inception_model, image_array)
+
+    return JSONResponse(content={"prediction": prediction})
 
 @app.get("/")
 async def root():
