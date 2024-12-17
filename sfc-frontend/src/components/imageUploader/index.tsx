@@ -3,6 +3,7 @@ import Button from '../UI/Button'
 import { EUploadStatus, FileIntermediate } from '../../types/FileIntermediate'
 import { uniqueId } from 'lodash'
 import Divider from '../UI/Divider'
+import ImageCard from './ImageCard'
 
 const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg']
 const BATCH_SIZE = 5
@@ -109,7 +110,7 @@ const ImageUploader = () => {
   }
 
   return (
-    <div className="w-full h-full flex flex-col items-center gap-2">
+    <div className="w-full h-full flex flex-col items-center gap-2 overflow-auto">
       <div
         className={`h-[300px] w-[600px] border-black border-dashed border-2 ${isDragging ? `border-green-600` : ``}`}
       >
@@ -148,7 +149,7 @@ const ImageUploader = () => {
       </div>
 
       {images.length ? (
-        <div className="flex flex-col gap-2 w-[600px] h-full border-black border-2 p-2 rounded-md overflow-auto">
+        <div className="flex flex-col gap-2 w-[800px] h-full border-black border-2 p-2 rounded-md overflow-auto">
           <div
             className="grid w-full justify-items-center items-center p-2 border-black border-b-2 sticky top-0"
             style={{ gridTemplateColumns: '1fr min-content 1fr' }}
@@ -161,10 +162,10 @@ const ImageUploader = () => {
           {images.map((img, idx) => (
             <div key={idx}>
               <div
-                className="grid w-full justify-items-center items-center "
+                className="grid w-full justify-items-center items-center h-[100px]"
                 style={{ gridTemplateColumns: '1fr min-content 1fr' }}
               >
-                <span>{img.file.name}</span>
+                <ImageCard file={img} />
                 <Divider vertical />
                 <span></span>
               </div>
