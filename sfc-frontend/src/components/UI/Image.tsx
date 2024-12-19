@@ -2,14 +2,22 @@ import React from 'react'
 
 const Image = ({
   src,
-  width = 60,
-  height = 60,
+  width = 100,
+  height = 100,
 }: {
   src: string
   width?: number
   height?: number
 }) => {
-  return <img src={src} alt="image" width={width} height={height} />
+  return (
+    <img
+      src={src}
+      alt="image"
+      width={width}
+      height={height}
+      className="object-contain"
+    />
+  )
 }
 
 export default Image
