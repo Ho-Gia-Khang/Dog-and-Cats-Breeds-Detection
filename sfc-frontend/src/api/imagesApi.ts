@@ -9,8 +9,8 @@ const useImagesApi = () => {
     return await httpClient.httpGet(`${url}`)
   }
 
-  async function uploadImage(file: File) {
-    return await httpClient.httpPost(`${url}/api/upload/cnn`, file)
+  async function uploadImage(model: string, file: File) {
+    return await httpClient.httpPost(`${url}/api/upload/${model}`, file)
   }
 
   return {
