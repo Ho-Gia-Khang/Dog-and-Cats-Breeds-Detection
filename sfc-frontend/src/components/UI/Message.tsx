@@ -23,7 +23,7 @@ const Message = ({
     }
   }
 
-  return <div className={`${getSeverityClass()} p-1`}>{message}</div>
+  return <div className={`${getSeverityClass()} p-1 w-full`}>{message}</div>
 }
 
 export default Message

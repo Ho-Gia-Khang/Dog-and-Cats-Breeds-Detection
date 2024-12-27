@@ -1,21 +1,47 @@
 import React from 'react'
 import Button from '../UI/Button'
 import { EUploadStatus, FileIntermediate } from '../../types/FileIntermediate'
-import { uniqueId } from 'lodash'
+import { cloneDeep, uniqueId } from 'lodash'
 import Divider from '../UI/Divider'
 import ImageCard from './ImageCard'
 import useImagesApi from '../../api/imagesApi'
 import { EModel } from '../../types/Models'
+import { ImageDetectionResponse } from '../../api/model/ImageDetectionResponse'
 
 const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg']
 const BATCH_SIZE = 5
 
+interface Row {
+  image: FileIntermediate
+  content?: ImageDetectionResponse
+}
+
 const ImageUploader = () => {
   const [isDragging, setIsDragging] = React.useState(false)
   const [images, setImages] = React.useState<FileIntermediate[]>([])
+  const [results, setResults] = React.useState<
+    Record<string, ImageDetectionResponse>
+  >({})
   const [selectedModel, setSelectedModel] = React.useState<EModel>(
     EModel.RESNET
   )
+  const [rows, setRows] = React.useState<Record<string, Row>>({})
+  const [updateTrigger, setUpdateTrigger] = React.useState(0)
+
+  React.useEffect(() => {
+    const modifiedRows: Record<string, Row> = {}
+
+    Object.keys(rows).forEach((k) => {
+      const img = images.find((i) => i.id === k)
+      modifiedRows[k] = {
+        image: img!,
+        content: results[k],
+      }
+    })
+
+    setRows(modifiedRows)
+    setUpdateTrigger((prev) => prev + 1)
+  }, [images, results])
 
   const inputRef = React.useRef<HTMLInputElement>(null)
 
@@ -34,7 +60,16 @@ const ImageUploader = () => {
         file: file,
         status: EUploadStatus.Idle,
       }))
-    setImages([...images, ...acceptedFiles])
+    setImages([...images, ...cloneDeep(acceptedFiles)])
+
+    const newRows: Record<string, Row> = {}
+
+    acceptedFiles.forEach((file) => {
+      newRows[file.id] = {
+        image: file,
+      }
+    })
+    setRows({ ...rows, ...newRows })
   }
 
   function onDragOver(e: React.DragEvent<HTMLDivElement>) {
@@ -66,8 +101,11 @@ const ImageUploader = () => {
 
   async function onUpload() {
     for (const image of images) {
-      image.status = EUploadStatus.Pending
+      updateFileStatus(image.id, EUploadStatus.Pending)
     }
+    Object.keys(rows).forEach((key) => {
+      rows[key].content = undefined
+    })
     await startUpload()
   }
 
@@ -85,12 +123,12 @@ const ImageUploader = () => {
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
+      await Promise.any(queue)
       const isPendingLeft = images.some(
         (image) => image.status === EUploadStatus.Pending
       )
-      if (!isPendingLeft) break
 
-      await Promise.any(queue)
+      if (!isPendingLeft) break
 
       const nextImage = images.find(
         (image) => image.status === EUploadStatus.Pending
@@ -108,14 +146,32 @@ const ImageUploader = () => {
     await Promise.allSettled(queue)
   }
 
+  function updateFileStatus(id: string, status: EUploadStatus) {
+    const idx = images.findIndex((img) => img.id === id)
+    if (idx !== -1) {
+      images[idx].status = status
+      setUpdateTrigger((prev) => prev + 1)
+    }
+  }
+
   async function uploadImage(
     image: FileIntermediate,
     model: EModel
   ): Promise<void> {
     return new Promise((resolve) => {
-      image.status = EUploadStatus.Uploading
-      imageApi.uploadImage(model, image.file)
-      resolve()
+      updateFileStatus(image.id, EUploadStatus.Uploading)
+      imageApi
+        .uploadImage(model, image.file)
+        .then((res) => {
+          setResults({ ...results, [image.id]: { ...res } })
+          results[image.id] = res
+          updateFileStatus(image.id, EUploadStatus.Done)
+        })
+        .catch((err) => {
+          updateFileStatus(image.id, EUploadStatus.Error)
+          throw err
+        })
+        .finally(resolve)
     })
   }
 
@@ -170,7 +226,7 @@ const ImageUploader = () => {
         <Button label="Clear" onClick={onClear} />
       </div>
 
-      {images.length ? (
+      {Object.keys(rows).length ? (
         <div className="flex flex-col gap-2 w-[800px] h-full border-black border-2 px-2 rounded-md overflow-auto">
           <div
             className="grid w-full justify-items-center z-10 items-center bg-white p-2 border-black border-b-2 sticky top-0"
@@ -181,15 +237,22 @@ const ImageUploader = () => {
             <h3 className="text-xl">Results</h3>
           </div>
 
-          {images.map((img, idx) => (
-            <div key={idx}>
+          {Object.entries(rows).map(([key, row]) => (
+            <div key={key}>
               <div
                 className="grid w-full justify-items-center items-center h-[100px]"
                 style={{ gridTemplateColumns: '1fr min-content 1fr' }}
               >
-                <ImageCard file={img} />
+                <ImageCard file={row.image} />
                 <Divider vertical />
-                <span></span>
+                <span>
+                  {Object.entries(row.content ?? {}).map(([key, val]) => (
+                    <div key={key} className="flex flex-col gap-2">
+                      <p>Predicted class: {val.predicted_class}</p>
+                      <p>Confidence: {val.confidence}</p>
+                    </div>
+                  ))}
+                </span>
               </div>
               <Divider />
             </div>
