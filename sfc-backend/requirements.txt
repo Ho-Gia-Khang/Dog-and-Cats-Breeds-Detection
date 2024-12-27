@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+pillow==10.3.0
+tensorflow==2.16.1
+keras==3.3.3
+numpy
+python-multipart

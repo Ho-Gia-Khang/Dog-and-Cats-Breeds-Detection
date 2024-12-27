@@ -8,10 +8,10 @@ from PIL import Image
 import os
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+# os.environ["TF_USE_LEGACY_KERAS"] = "1"
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 import tensorflow as tf
-
 
 origins = [
     "http://localhost:3000",

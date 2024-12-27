@@ -13,13 +13,14 @@ export default function useHttpClient() {
 
   async function httpRequest(url: string, method: HTTPMethod, body?: any) {
     const headers = createHeader()
-    if (body) {
-      headers['Content-Type'] = 'application/json'
-    }
+    // if (body) {
+    //   headers['Content-Type'] = 'application/json'
+    // }
     const response = await fetch(url, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : undefined,
+      body: body ?? undefined,
+      // body: body ? JSON.stringify(body) : undefined,
     })
 
     if (!response.ok) throw await response.json()
