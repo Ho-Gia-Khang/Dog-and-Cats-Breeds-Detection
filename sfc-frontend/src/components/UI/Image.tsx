@@ -12,7 +12,7 @@ const Image = ({
   return (
     <img
       src={src}
-      alt="image"
+      alt={src}
       width={width}
       height={height}
       className="object-contain"

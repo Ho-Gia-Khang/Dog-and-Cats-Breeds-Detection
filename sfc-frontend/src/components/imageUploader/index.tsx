@@ -1,12 +1,13 @@
 import React from 'react'
 import Button from '../UI/Button'
 import { EUploadStatus, FileIntermediate } from '../../types/FileIntermediate'
-import { cloneDeep, uniqueId } from 'lodash'
+import { cloneDeep, isEmpty, uniqueId } from 'lodash'
 import Divider from '../UI/Divider'
 import ImageCard from './ImageCard'
 import useImagesApi from '../../api/imagesApi'
 import { EModel } from '../../types/Models'
 import { ImageDetectionResponse } from '../../api/model/ImageDetectionResponse'
+import Chart from '../chart'
 
 const ALLOWED_FILE_TYPES = ['image/png', 'image/jpeg']
 const BATCH_SIZE = 5
@@ -227,7 +228,7 @@ const ImageUploader = () => {
       </div>
 
       {Object.keys(rows).length ? (
-        <div className="flex flex-col gap-2 w-[800px] h-full border-black border-2 px-2 rounded-md overflow-auto">
+        <div className="flex flex-col gap-2 w-[800px] h-[500px] border-black border-2 px-2 rounded-md overflow-auto">
           <div
             className="grid w-full justify-items-center z-10 items-center bg-white p-2 border-black border-b-2 sticky top-0"
             style={{ gridTemplateColumns: '1fr min-content 1fr' }}
@@ -261,6 +262,8 @@ const ImageUploader = () => {
       ) : (
         <h2>Upload some images for prediction</h2>
       )}
+
+      {!isEmpty(results) ? <Chart images={images} results={results} /> : <></>}
     </div>
   )
 }
