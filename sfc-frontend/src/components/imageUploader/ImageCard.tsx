@@ -26,7 +26,9 @@ const ImageUploader = ({ file }: { file: FileIntermediate }) => {
     <div className="h-full w-full bg-gray-200 flex flex-row gap-2 items-center">
       <Image src={URL.createObjectURL(file.file)} />
       <div className="h-full w-full flex flex-col p-2">
-        <span className="font-semibold text-ellipsis">{file.file.name}</span>
+        <span className="font-semibold text-ellipsis max-w-64">
+          {file.file.name}
+        </span>
         <span className="text-gray-500">
           {convertToFileSizeMb(file.file.size)}MB
         </span>

@@ -97,7 +97,10 @@ const ImageUploader = () => {
   }
 
   function onClear() {
+    setRows({})
     setImages([])
+    setResults({})
+    setUpdateTrigger((prev) => prev + 1)
   }
 
   async function onUpload() {
@@ -121,6 +124,8 @@ const ImageUploader = () => {
         })
         return promise
       })
+
+    if (!queue.length) return
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -241,13 +246,13 @@ const ImageUploader = () => {
           {Object.entries(rows).map(([key, row]) => (
             <div key={key}>
               <div
-                className="grid w-full justify-items-center items-center h-[100px]"
+                className="grid w-full justify-items-center items-center h-fit min-h-[100px]"
                 style={{ gridTemplateColumns: '1fr min-content 1fr' }}
               >
                 <ImageCard file={row.image} />
                 <Divider vertical />
                 <span>
-                  {Object.entries(row.content ?? {}).map(([key, val]) => (
+                  {Object.entries(row.content ?? {}).map(([_, val]) => (
                     <div key={key} className="flex flex-col gap-2">
                       <p>Predicted class: {val.predicted_class}</p>
                       <p>Confidence: {val.confidence}</p>
