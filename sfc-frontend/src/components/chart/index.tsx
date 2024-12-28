@@ -41,8 +41,18 @@ const index = ({
   results: Record<string, ImageDetectionResponse>
 }) => {
   function getColors() {
-    return `rgba(${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},0.5)`
+    const colors: Record<string, string> = {}
+    Object.values(results).forEach((result) => {
+      colors[result.prediction.predicted_class] =
+        `rgba(${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},${Math.floor(Math.random() * 256)},0.5)`
+    })
+
+    return colors
   }
+
+  const colors = getColors()
+
+  const renderedLabels: Record<string, boolean> = {}
 
   const data = {
     labels: images.map((img) => img.file.name),
@@ -52,7 +62,7 @@ const index = ({
         if (key === k) return results[k].prediction.confidence
         return 0
       }),
-      backgroundColor: getColors(),
+      backgroundColor: colors[results[k].prediction.predicted_class],
       borderColor: 'rgba(75,192,192,1)',
       borderWidth: 1,
     })),
