@@ -5,7 +5,7 @@ import Header from './Header'
 
 function App() {
   return (
-    <div className="App w-screen h-screen m-0 p-0">
+    <div className="m-0 p-0">
       <div className="w-full h-full flex flex-col items-center py-6 gap-6">
         <Header />
         <ImageUploader />
